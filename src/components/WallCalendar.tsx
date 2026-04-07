@@ -145,7 +145,7 @@ export default function WallCalendar() {
       scale: 1,
       transition: {
         delay: i * 0.012,
-        type: "spring",
+        type: "spring" as const,
         stiffness: 300,
         damping: 24,
       },
