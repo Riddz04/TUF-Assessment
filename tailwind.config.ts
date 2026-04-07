@@ -70,25 +70,53 @@ export default {
       },
       keyframes: {
         "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
+        "flip-out-top": {
+          "0%": { transform: "rotateX(0deg)", opacity: "1" },
+          "100%": { transform: "rotateX(-90deg)", opacity: "0" },
+        },
+        "flip-in-bottom": {
+          "0%": { transform: "rotateX(90deg)", opacity: "0" },
+          "100%": { transform: "rotateX(0deg)", opacity: "1" },
+        },
+        "flip-out-bottom": {
+          "0%": { transform: "rotateX(0deg)", opacity: "1" },
+          "100%": { transform: "rotateX(90deg)", opacity: "0" },
+        },
+        "flip-in-top": {
+          "0%": { transform: "rotateX(-90deg)", opacity: "0" },
+          "100%": { transform: "rotateX(0deg)", opacity: "1" },
+        },
+        "fade-in": {
+          "0%": { opacity: "0", transform: "translateY(10px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        "day-pop": {
+          "0%": { transform: "scale(0.5)", opacity: "0" },
+          "70%": { transform: "scale(1.08)" },
+          "100%": { transform: "scale(1)", opacity: "1" },
+        },
+        "slide-up": {
+          "0%": { opacity: "0", transform: "translateY(8px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "flip-out-top": "flip-out-top 0.35s ease-in forwards",
+        "flip-in-bottom": "flip-in-bottom 0.35s ease-out forwards",
+        "flip-out-bottom": "flip-out-bottom 0.35s ease-in forwards",
+        "flip-in-top": "flip-in-top 0.35s ease-out forwards",
+        "fade-in": "fade-in 0.4s ease-out forwards",
+        "day-pop": "day-pop 0.3s ease-out forwards",
+        "slide-up": "slide-up 0.3s ease-out forwards",
       },
     },
   },
