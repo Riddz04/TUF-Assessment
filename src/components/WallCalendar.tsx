@@ -119,7 +119,7 @@ export default function WallCalendar() {
       opacity: 1,
       scale: 1,
       transition: {
-        rotateX: { type: "spring", stiffness: 100, damping: 20, duration: 0.6 },
+        rotateX: { type: "spring" as const, stiffness: 100, damping: 20, duration: 0.6 },
         opacity: { duration: 0.3 },
         scale: { duration: 0.3 },
       },
