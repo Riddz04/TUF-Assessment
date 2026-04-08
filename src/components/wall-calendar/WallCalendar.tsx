@@ -511,6 +511,9 @@ export default function WallCalendar() {
                 currentMonth={currentMonth}
                 noteDates={noteDates}
                 onDayDoubleClick={addStickyNote}
+                rangeStart={rangeStart}
+                rangeEnd={rangeEnd}
+                onRangeChange={(s, e) => { setRangeStart(s); setRangeEnd(e); }}
               />
             </div>
 
