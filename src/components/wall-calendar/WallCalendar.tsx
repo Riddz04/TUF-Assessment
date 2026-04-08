@@ -154,6 +154,8 @@ export default function WallCalendar() {
   const [direction, setDirection] = useState(0);
   const [notes, setNotes] = useState<NoteData[]>([]);
   const [isDark, setIsDark] = useState(false);
+  const [rangeStart, setRangeStart] = useState<Date | null>(null);
+  const [rangeEnd, setRangeEnd] = useState<Date | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Calendar drag position (pixels from center)
@@ -509,6 +511,9 @@ export default function WallCalendar() {
                 currentMonth={currentMonth}
                 noteDates={noteDates}
                 onDayDoubleClick={addStickyNote}
+                rangeStart={rangeStart}
+                rangeEnd={rangeEnd}
+                onRangeChange={(s, e) => { setRangeStart(s); setRangeEnd(e); }}
               />
             </div>
 
