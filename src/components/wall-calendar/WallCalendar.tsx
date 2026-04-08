@@ -8,10 +8,26 @@ import {
   isSameMonth,
   eachDayOfInterval,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Plus, Pin } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import CalendarGrid from "./CalendarGrid";
 import StickyNote, { STICKY_COLOR_KEYS } from "./StickyNote";
+
+// Seasonal wall palettes: [wallGradientStart, wallGradientEnd, accentGlow, warmth]
+const MONTH_PALETTES: Record<number, { wall: [string, string]; glow: string; accent: string }> = {
+  0:  { wall: ["hsl(210, 18%, 88%)", "hsl(215, 15%, 82%)"], glow: "hsl(210, 30%, 85%)", accent: "hsl(210, 40%, 70%)" },  // Jan - cool blue-grey
+  1:  { wall: ["hsl(215, 16%, 87%)", "hsl(220, 14%, 81%)"], glow: "hsl(215, 28%, 84%)", accent: "hsl(220, 35%, 72%)" },  // Feb - steel blue
+  2:  { wall: ["hsl(140, 14%, 88%)", "hsl(150, 12%, 83%)"], glow: "hsl(140, 25%, 85%)", accent: "hsl(150, 30%, 70%)" },  // Mar - soft sage
+  3:  { wall: ["hsl(120, 12%, 89%)", "hsl(130, 10%, 84%)"], glow: "hsl(120, 20%, 86%)", accent: "hsl(130, 28%, 72%)" },  // Apr - spring green
+  4:  { wall: ["hsl(80, 14%, 89%)", "hsl(90, 12%, 84%)"],   glow: "hsl(80, 22%, 86%)",  accent: "hsl(90, 30%, 70%)" },   // May - lime
+  5:  { wall: ["hsl(45, 18%, 89%)", "hsl(40, 16%, 83%)"],   glow: "hsl(45, 28%, 86%)",  accent: "hsl(40, 35%, 72%)" },   // Jun - warm gold
+  6:  { wall: ["hsl(35, 22%, 89%)", "hsl(30, 20%, 82%)"],   glow: "hsl(35, 32%, 85%)",  accent: "hsl(30, 40%, 70%)" },   // Jul - sunlit amber
+  7:  { wall: ["hsl(30, 24%, 88%)", "hsl(25, 22%, 81%)"],   glow: "hsl(30, 35%, 84%)",  accent: "hsl(25, 42%, 68%)" },   // Aug - warm peach
+  8:  { wall: ["hsl(25, 18%, 88%)", "hsl(20, 16%, 83%)"],   glow: "hsl(25, 28%, 85%)",  accent: "hsl(20, 35%, 70%)" },   // Sep - harvest
+  9:  { wall: ["hsl(18, 16%, 87%)", "hsl(15, 14%, 82%)"],   glow: "hsl(18, 25%, 84%)",  accent: "hsl(15, 32%, 68%)" },   // Oct - autumn rust
+  10: { wall: ["hsl(220, 14%, 87%)", "hsl(225, 12%, 82%)"], glow: "hsl(220, 22%, 84%)", accent: "hsl(225, 28%, 70%)" },  // Nov - cool slate
+  11: { wall: ["hsl(210, 20%, 90%)", "hsl(215, 18%, 84%)"], glow: "hsl(210, 30%, 87%)", accent: "hsl(215, 35%, 74%)" },  // Dec - icy blue
+};
 
 interface NoteData {
   id: string;
@@ -132,23 +148,42 @@ export default function WallCalendar() {
     return format(rangeStart, "MMM d");
   }, [rangeStart, rangeEnd]);
 
+  const palette = MONTH_PALETTES[currentMonth.getMonth()];
+
   return (
-    <div
+    <motion.div
       className="h-screen w-screen overflow-hidden relative flex items-center justify-center"
-      style={{
+      animate={{
         background: `
-          radial-gradient(ellipse at 30% 20%, hsl(var(--accent) / 0.3) 0%, transparent 50%),
-          radial-gradient(ellipse at 70% 80%, hsl(var(--primary) / 0.08) 0%, transparent 50%),
-          linear-gradient(180deg, hsl(30, 15%, 88%) 0%, hsl(25, 12%, 82%) 100%)
+          radial-gradient(ellipse at 25% 15%, ${palette.glow} 0%, transparent 55%),
+          radial-gradient(ellipse at 75% 85%, ${palette.accent}33 0%, transparent 50%),
+          linear-gradient(170deg, ${palette.wall[0]} 0%, ${palette.wall[1]} 100%)
         `,
       }}
+      transition={{ duration: 1.2, ease: "easeInOut" }}
     >
       {/* Wall texture overlay */}
       <div
-        className="absolute inset-0 opacity-[0.04] pointer-events-none"
+        className="absolute inset-0 opacity-[0.03] pointer-events-none"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E")`,
+        }}
+      />
+      {/* Subtle cross pattern */}
+      <div
+        className="absolute inset-0 opacity-[0.02] pointer-events-none"
         style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
         }}
+      />
+
+      {/* Ambient light effect */}
+      <motion.div
+        className="absolute inset-0 pointer-events-none"
+        animate={{
+          background: `radial-gradient(ellipse at 50% 30%, ${palette.accent}15 0%, transparent 70%)`,
+        }}
+        transition={{ duration: 1.2 }}
       />
 
       {/* Shadow on the wall behind calendar */}
@@ -157,9 +192,9 @@ export default function WallCalendar() {
         style={{
           width: "min(90vw, 520px)",
           height: "min(82vh, 580px)",
-          background: "hsla(0, 0%, 0%, 0.12)",
-          filter: "blur(30px)",
-          transform: "translate(6px, 10px)",
+          background: "hsla(0, 0%, 0%, 0.1)",
+          filter: "blur(35px)",
+          transform: "translate(5px, 12px)",
         }}
       />
 
@@ -221,15 +256,16 @@ export default function WallCalendar() {
             initial="enter"
             animate="center"
             exit="exit"
-            className="flex-1 flex flex-col bg-card rounded-b-xl overflow-hidden relative"
+            className="flex-1 flex flex-col bg-card rounded-b-xl overflow-hidden relative border border-border/30"
             style={{
               transformOrigin: "top center",
               transformStyle: "preserve-3d",
               boxShadow: `
-                0 2px 8px hsla(0,0%,0%,0.08),
-                0 8px 24px hsla(0,0%,0%,0.12),
-                0 20px 48px hsla(0,0%,0%,0.08),
-                inset 0 1px 0 hsla(0,0%,100%,0.6)
+                0 1px 4px hsla(0,0%,0%,0.06),
+                0 4px 16px hsla(0,0%,0%,0.08),
+                0 12px 32px hsla(0,0%,0%,0.1),
+                0 24px 56px hsla(0,0%,0%,0.06),
+                inset 0 1px 0 hsla(0,0%,100%,0.7)
               `,
             }}
           >
@@ -340,10 +376,10 @@ export default function WallCalendar() {
             </AnimatePresence>
 
             {/* Bottom accent bar */}
-            <div className="h-1 bg-gradient-to-r from-primary/15 via-primary/50 to-primary/15" />
+            <div className="h-1 bg-gradient-to-r from-primary/10 via-primary/40 to-primary/10 rounded-b-xl" />
           </motion.div>
         </AnimatePresence>
       </div>
-    </div>
+    </motion.div>
   );
 }

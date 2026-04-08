@@ -99,18 +99,19 @@ export default function CalendarGrid({
               onMouseEnter={() => inMonth && onDayHover(day)}
               onMouseLeave={() => onDayHover(null)}
               disabled={!inMonth}
-              whileHover={inMonth ? { scale: 1.18, y: -1 } : {}}
-              whileTap={inMonth ? { scale: 0.9 } : {}}
+              whileHover={inMonth ? { scale: 1.12, y: -1 } : {}}
+              whileTap={inMonth ? { scale: 0.92 } : {}}
               className={`
                 relative flex items-center justify-center
-                text-xs sm:text-sm font-medium rounded-md transition-colors duration-150
-                ${!inMonth ? "text-muted-foreground/15 cursor-default" : "cursor-pointer"}
+                text-xs sm:text-sm font-medium rounded-lg transition-all duration-200
+                ${!inMonth ? "text-muted-foreground/12 cursor-default" : "cursor-pointer hover:bg-accent/40"}
                 ${inMonth && !inRange && !isStart && !isEnd && weekend ? "text-calendar-weekend" : ""}
-                ${inMonth && !inRange && !isStart && !isEnd && !weekend ? "text-foreground" : ""}
-                ${inRange && !isStart && !isEnd ? "bg-calendar-range text-calendar-range-foreground" : ""}
-                ${isStart ? "bg-primary text-primary-foreground font-bold shadow-md shadow-primary/30 z-10" : ""}
-                ${isEnd ? "bg-primary text-primary-foreground font-bold shadow-md shadow-primary/30 z-10" : ""}
-                ${today && !isStart && !isEnd ? "ring-1.5 ring-primary/40 ring-offset-1 ring-offset-card font-semibold" : ""}
+                ${inMonth && !inRange && !isStart && !isEnd && !weekend ? "text-foreground/80" : ""}
+                ${inRange && !isStart && !isEnd ? "bg-calendar-range text-calendar-range-foreground rounded-none" : ""}
+                ${isStart ? "bg-primary text-primary-foreground font-semibold shadow-sm shadow-primary/20 z-10 rounded-l-lg rounded-r-none" : ""}
+                ${isEnd ? "bg-primary text-primary-foreground font-semibold shadow-sm shadow-primary/20 z-10 rounded-r-lg rounded-l-none" : ""}
+                ${isStart && !isEnd && !rangeEnd ? "rounded-lg" : ""}
+                ${today && !isStart && !isEnd ? "ring-1 ring-primary/30 ring-offset-1 ring-offset-card font-medium" : ""}
               `}
             >
               {format(day, "d")}
