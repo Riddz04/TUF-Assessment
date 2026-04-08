@@ -199,14 +199,69 @@ export default function WallCalendar() {
         }}
       />
 
-      {/* Ambient light effect */}
+      {/* Ambient light / lamp glow effect */}
       <motion.div
         className="absolute inset-0 pointer-events-none"
         animate={{
-          background: `radial-gradient(ellipse at 50% 30%, ${palette.accent}15 0%, transparent 70%)`,
+          background: isDark
+            ? `radial-gradient(ellipse at 50% 0%, ${palette.glow}90 0%, ${palette.glow}30 25%, transparent 60%)`
+            : `radial-gradient(ellipse at 50% 30%, ${palette.accent}15 0%, transparent 70%)`,
         }}
         transition={{ duration: 1.2 }}
       />
+
+      {/* Dark mode warm vignette */}
+      <AnimatePresence>
+        {isDark && (
+          <motion.div
+            className="absolute inset-0 pointer-events-none"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.8 }}
+            style={{
+              background: "radial-gradient(ellipse at 50% 40%, transparent 30%, hsla(20, 30%, 5%, 0.5) 100%)",
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Dark mode toggle */}
+      <motion.button
+        className="absolute top-4 right-4 z-50 w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-sm border transition-colors"
+        style={{
+          background: isDark ? "hsla(35, 40%, 20%, 0.7)" : "hsla(0, 0%, 100%, 0.6)",
+          borderColor: isDark ? "hsla(35, 30%, 30%, 0.5)" : "hsla(0, 0%, 0%, 0.08)",
+        }}
+        onClick={() => setIsDark(!isDark)}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        title={isDark ? "Switch to day mode" : "Switch to night mode"}
+      >
+        <AnimatePresence mode="wait">
+          {isDark ? (
+            <motion.div
+              key="sun"
+              initial={{ rotate: -90, opacity: 0, scale: 0.5 }}
+              animate={{ rotate: 0, opacity: 1, scale: 1 }}
+              exit={{ rotate: 90, opacity: 0, scale: 0.5 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Sun className="w-4.5 h-4.5" style={{ color: "hsl(35, 70%, 60%)" }} />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="moon"
+              initial={{ rotate: 90, opacity: 0, scale: 0.5 }}
+              animate={{ rotate: 0, opacity: 1, scale: 1 }}
+              exit={{ rotate: -90, opacity: 0, scale: 0.5 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Moon className="w-4.5 h-4.5 text-muted-foreground" />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.button>
 
       {/* Shadow on the wall behind calendar */}
       <div
@@ -214,8 +269,8 @@ export default function WallCalendar() {
         style={{
           width: "min(90vw, 520px)",
           height: "min(82vh, 580px)",
-          background: "hsla(0, 0%, 0%, 0.1)",
-          filter: "blur(35px)",
+          background: isDark ? "hsla(0, 0%, 0%, 0.3)" : "hsla(0, 0%, 0%, 0.1)",
+          filter: isDark ? "blur(45px)" : "blur(35px)",
           transform: "translate(5px, 12px)",
         }}
       />
