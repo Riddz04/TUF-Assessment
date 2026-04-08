@@ -56,7 +56,7 @@ export default function StickyNote({
 
   return (
     <motion.div
-      className="absolute z-30 select-none"
+      className="absolute z-30 select-none group"
       style={{
         left: `${position.x}%`,
         top: `${position.y}%`,
