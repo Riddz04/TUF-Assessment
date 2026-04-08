@@ -104,6 +104,11 @@ export default function WallCalendar() {
   const [rangeEnd, setRangeEnd] = useState<Date | null>(null);
   const [hoveredDate, setHoveredDate] = useState<Date | null>(null);
   const [notes, setNotes] = useState<NoteData[]>([]);
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDark);
+  }, [isDark]);
 
   const monthKey = format(currentMonth, "yyyy-MM");
 
@@ -164,7 +169,8 @@ export default function WallCalendar() {
     return format(rangeStart, "MMM d");
   }, [rangeStart, rangeEnd]);
 
-  const palette = MONTH_PALETTES[currentMonth.getMonth()];
+  const palettes = isDark ? DARK_PALETTES : LIGHT_PALETTES;
+  const palette = palettes[currentMonth.getMonth()];
 
   return (
     <motion.div
