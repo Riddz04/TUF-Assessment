@@ -256,15 +256,16 @@ export default function WallCalendar() {
             initial="enter"
             animate="center"
             exit="exit"
-            className="flex-1 flex flex-col bg-card rounded-b-xl overflow-hidden relative"
+            className="flex-1 flex flex-col bg-card rounded-b-xl overflow-hidden relative border border-border/30"
             style={{
               transformOrigin: "top center",
               transformStyle: "preserve-3d",
               boxShadow: `
-                0 2px 8px hsla(0,0%,0%,0.08),
-                0 8px 24px hsla(0,0%,0%,0.12),
-                0 20px 48px hsla(0,0%,0%,0.08),
-                inset 0 1px 0 hsla(0,0%,100%,0.6)
+                0 1px 4px hsla(0,0%,0%,0.06),
+                0 4px 16px hsla(0,0%,0%,0.08),
+                0 12px 32px hsla(0,0%,0%,0.1),
+                0 24px 56px hsla(0,0%,0%,0.06),
+                inset 0 1px 0 hsla(0,0%,100%,0.7)
               `,
             }}
           >
