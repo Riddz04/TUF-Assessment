@@ -1,3 +1,3 @@
-# Welcome to your Lovable project
+# My Calendar View
 
-TODO: Document your project here
+A calendar view application built with React, TypeScript, and Tailwind CSS.
