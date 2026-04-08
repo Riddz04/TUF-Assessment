@@ -148,23 +148,42 @@ export default function WallCalendar() {
     return format(rangeStart, "MMM d");
   }, [rangeStart, rangeEnd]);
 
+  const palette = MONTH_PALETTES[currentMonth.getMonth()];
+
   return (
-    <div
+    <motion.div
       className="h-screen w-screen overflow-hidden relative flex items-center justify-center"
-      style={{
+      animate={{
         background: `
-          radial-gradient(ellipse at 30% 20%, hsl(var(--accent) / 0.3) 0%, transparent 50%),
-          radial-gradient(ellipse at 70% 80%, hsl(var(--primary) / 0.08) 0%, transparent 50%),
-          linear-gradient(180deg, hsl(30, 15%, 88%) 0%, hsl(25, 12%, 82%) 100%)
+          radial-gradient(ellipse at 25% 15%, ${palette.glow} 0%, transparent 55%),
+          radial-gradient(ellipse at 75% 85%, ${palette.accent}33 0%, transparent 50%),
+          linear-gradient(170deg, ${palette.wall[0]} 0%, ${palette.wall[1]} 100%)
         `,
       }}
+      transition={{ duration: 1.2, ease: "easeInOut" }}
     >
       {/* Wall texture overlay */}
       <div
-        className="absolute inset-0 opacity-[0.04] pointer-events-none"
+        className="absolute inset-0 opacity-[0.03] pointer-events-none"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E")`,
+        }}
+      />
+      {/* Subtle cross pattern */}
+      <div
+        className="absolute inset-0 opacity-[0.02] pointer-events-none"
         style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
         }}
+      />
+
+      {/* Ambient light effect */}
+      <motion.div
+        className="absolute inset-0 pointer-events-none"
+        animate={{
+          background: `radial-gradient(ellipse at 50% 30%, ${palette.accent}15 0%, transparent 70%)`,
+        }}
+        transition={{ duration: 1.2 }}
       />
 
       {/* Shadow on the wall behind calendar */}
@@ -173,9 +192,9 @@ export default function WallCalendar() {
         style={{
           width: "min(90vw, 520px)",
           height: "min(82vh, 580px)",
-          background: "hsla(0, 0%, 0%, 0.12)",
-          filter: "blur(30px)",
-          transform: "translate(6px, 10px)",
+          background: "hsla(0, 0%, 0%, 0.1)",
+          filter: "blur(35px)",
+          transform: "translate(5px, 12px)",
         }}
       />
 
