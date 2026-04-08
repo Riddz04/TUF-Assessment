@@ -8,10 +8,26 @@ import {
   isSameMonth,
   eachDayOfInterval,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Plus, Pin } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import CalendarGrid from "./CalendarGrid";
 import StickyNote, { STICKY_COLOR_KEYS } from "./StickyNote";
+
+// Seasonal wall palettes: [wallGradientStart, wallGradientEnd, accentGlow, warmth]
+const MONTH_PALETTES: Record<number, { wall: [string, string]; glow: string; accent: string }> = {
+  0:  { wall: ["hsl(210, 18%, 88%)", "hsl(215, 15%, 82%)"], glow: "hsl(210, 30%, 85%)", accent: "hsl(210, 40%, 70%)" },  // Jan - cool blue-grey
+  1:  { wall: ["hsl(215, 16%, 87%)", "hsl(220, 14%, 81%)"], glow: "hsl(215, 28%, 84%)", accent: "hsl(220, 35%, 72%)" },  // Feb - steel blue
+  2:  { wall: ["hsl(140, 14%, 88%)", "hsl(150, 12%, 83%)"], glow: "hsl(140, 25%, 85%)", accent: "hsl(150, 30%, 70%)" },  // Mar - soft sage
+  3:  { wall: ["hsl(120, 12%, 89%)", "hsl(130, 10%, 84%)"], glow: "hsl(120, 20%, 86%)", accent: "hsl(130, 28%, 72%)" },  // Apr - spring green
+  4:  { wall: ["hsl(80, 14%, 89%)", "hsl(90, 12%, 84%)"],   glow: "hsl(80, 22%, 86%)",  accent: "hsl(90, 30%, 70%)" },   // May - lime
+  5:  { wall: ["hsl(45, 18%, 89%)", "hsl(40, 16%, 83%)"],   glow: "hsl(45, 28%, 86%)",  accent: "hsl(40, 35%, 72%)" },   // Jun - warm gold
+  6:  { wall: ["hsl(35, 22%, 89%)", "hsl(30, 20%, 82%)"],   glow: "hsl(35, 32%, 85%)",  accent: "hsl(30, 40%, 70%)" },   // Jul - sunlit amber
+  7:  { wall: ["hsl(30, 24%, 88%)", "hsl(25, 22%, 81%)"],   glow: "hsl(30, 35%, 84%)",  accent: "hsl(25, 42%, 68%)" },   // Aug - warm peach
+  8:  { wall: ["hsl(25, 18%, 88%)", "hsl(20, 16%, 83%)"],   glow: "hsl(25, 28%, 85%)",  accent: "hsl(20, 35%, 70%)" },   // Sep - harvest
+  9:  { wall: ["hsl(18, 16%, 87%)", "hsl(15, 14%, 82%)"],   glow: "hsl(18, 25%, 84%)",  accent: "hsl(15, 32%, 68%)" },   // Oct - autumn rust
+  10: { wall: ["hsl(220, 14%, 87%)", "hsl(225, 12%, 82%)"], glow: "hsl(220, 22%, 84%)", accent: "hsl(225, 28%, 70%)" },  // Nov - cool slate
+  11: { wall: ["hsl(210, 20%, 90%)", "hsl(215, 18%, 84%)"], glow: "hsl(210, 30%, 87%)", accent: "hsl(215, 35%, 74%)" },  // Dec - icy blue
+};
 
 interface NoteData {
   id: string;
