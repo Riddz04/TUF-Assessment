@@ -376,10 +376,10 @@ export default function WallCalendar() {
             </AnimatePresence>
 
             {/* Bottom accent bar */}
-            <div className="h-1 bg-gradient-to-r from-primary/15 via-primary/50 to-primary/15" />
+            <div className="h-1 bg-gradient-to-r from-primary/10 via-primary/40 to-primary/10 rounded-b-xl" />
           </motion.div>
         </AnimatePresence>
       </div>
-    </div>
+    </motion.div>
   );
 }
