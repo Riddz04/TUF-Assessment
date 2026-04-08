@@ -68,31 +68,27 @@ const NOTE_POSITIONS = [
 
 const flipVariants = {
   enter: (dir: number) => ({
-    rotateX: dir > 0 ? 90 : -90,
+    rotateX: dir > 0 ? 60 : -60,
     opacity: 0,
-    scale: 0.97,
-    filter: "brightness(0.7)",
+    scale: 0.98,
   }),
   center: {
     rotateX: 0,
     opacity: 1,
     scale: 1,
-    filter: "brightness(1)",
     transition: {
-      rotateX: { type: "spring" as const, stiffness: 80, damping: 18, duration: 0.7 },
-      opacity: { duration: 0.35 },
-      scale: { duration: 0.35 },
-      filter: { duration: 0.4 },
+      rotateX: { type: "spring" as const, stiffness: 200, damping: 22, duration: 0.3 },
+      opacity: { duration: 0.15 },
+      scale: { duration: 0.15 },
     },
   },
   exit: (dir: number) => ({
-    rotateX: dir > 0 ? -90 : 90,
+    rotateX: dir > 0 ? -60 : 60,
     opacity: 0,
-    scale: 0.97,
-    filter: "brightness(0.7)",
+    scale: 0.98,
     transition: {
-      rotateX: { type: "spring" as const, stiffness: 80, damping: 18, duration: 0.55 },
-      opacity: { duration: 0.25 },
+      rotateX: { type: "spring" as const, stiffness: 200, damping: 22, duration: 0.25 },
+      opacity: { duration: 0.12 },
     },
   }),
 };
