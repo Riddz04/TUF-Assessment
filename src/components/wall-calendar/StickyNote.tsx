@@ -56,7 +56,7 @@ export default function StickyNote({
 
   return (
     <motion.div
-      className="absolute z-30 select-none"
+      className="absolute z-30 select-none group"
       style={{
         left: `${position.x}%`,
         top: `${position.y}%`,
@@ -104,10 +104,10 @@ export default function StickyNote({
             e.stopPropagation();
             onRemove(id);
           }}
-          className="absolute top-1 right-1 w-4 h-4 flex items-center justify-center rounded-full opacity-0 hover:opacity-100 transition-opacity"
-          style={{ background: "hsla(0,0%,0%,0.1)" }}
+          className="absolute -top-1.5 -right-1.5 w-5 h-5 flex items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110"
+          style={{ background: "hsla(0, 60%, 50%, 0.85)", boxShadow: "0 1px 4px hsla(0,0%,0%,0.2)" }}
         >
-          <X className="w-2.5 h-2.5" style={{ color: "hsl(0,0%,30%)" }} />
+          <X className="w-3 h-3" style={{ color: "hsl(0,0%,100%)" }} />
         </button>
         {/* Curled corner */}
         <div
