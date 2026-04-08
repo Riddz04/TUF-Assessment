@@ -193,7 +193,34 @@ export default function WallCalendar() {
 
   const monthKey = format(currentMonth, "yyyy-MM");
 
+  const playFlipSound = useCallback(() => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const duration = 0.15;
+      const bufferSize = ctx.sampleRate * duration;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        const t = i / ctx.sampleRate;
+        const envelope = Math.exp(-t * 40);
+        data[i] = (Math.random() * 2 - 1) * envelope * 0.3;
+      }
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      const filter = ctx.createBiquadFilter();
+      filter.type = "bandpass";
+      filter.frequency.value = 2000;
+      filter.Q.value = 0.8;
+      const gain = ctx.createGain();
+      gain.gain.value = 0.25;
+      source.connect(filter).connect(gain).connect(ctx.destination);
+      source.start();
+      source.onended = () => ctx.close();
+    } catch {}
+  }, []);
+
   const navigateMonth = (dir: "next" | "prev") => {
+    playFlipSound();
     setDirection(dir === "next" ? 1 : -1);
     setCurrentMonth(dir === "next" ? addMonths(currentMonth, 1) : subMonths(currentMonth, 1));
   };
