@@ -1,15 +1,12 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import {
   format,
   addMonths,
   subMonths,
-  isBefore,
-  isSameDay,
   isSameMonth,
-  eachDayOfInterval,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Plus, Sun, Moon } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { ChevronLeft, ChevronRight, Sun, Moon } from "lucide-react";
+import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo } from "framer-motion";
 import CalendarGrid from "./CalendarGrid";
 import StickyNote, { STICKY_COLOR_KEYS } from "./StickyNote";
 
@@ -54,17 +51,76 @@ interface NoteData {
   rotation: number;
 }
 
-// Predefined positions for sticky notes around the calendar
-const NOTE_POSITIONS = [
-  { x: 1, y: 8 },
-  { x: 1, y: 42 },
-  { x: 1, y: 72 },
-  { x: 74, y: 5 },
-  { x: 76, y: 38 },
-  { x: 73, y: 70 },
-  { x: 30, y: 82 },
-  { x: 55, y: 84 },
-];
+const NOTE_SIZE = { w: 13, h: 16 }; // approximate note size in vw/vh %
+const MAX_NOTES = 12;
+
+/**
+ * Given the calendar's bounding box (in % of viewport), find available
+ * positions on the wall that don't overlap the calendar or other notes.
+ */
+function findNotePosition(
+  calRect: { x: number; y: number; w: number; h: number },
+  existingNotes: { x: number; y: number }[]
+): { x: number; y: number } {
+  // Candidate zones: left of cal, right of cal, below cal, above cal
+  const zones: { xMin: number; xMax: number; yMin: number; yMax: number }[] = [];
+
+  // Right side
+  if (calRect.x + calRect.w + NOTE_SIZE.w + 2 < 96) {
+    zones.push({ xMin: calRect.x + calRect.w + 2, xMax: 96 - NOTE_SIZE.w, yMin: 4, yMax: 92 - NOTE_SIZE.h });
+  }
+  // Left side
+  if (calRect.x - NOTE_SIZE.w - 2 > 2) {
+    zones.push({ xMin: 2, xMax: calRect.x - NOTE_SIZE.w - 2, yMin: 4, yMax: 92 - NOTE_SIZE.h });
+  }
+  // Below
+  if (calRect.y + calRect.h + NOTE_SIZE.h + 2 < 96) {
+    zones.push({ xMin: 4, xMax: 92 - NOTE_SIZE.w, yMin: calRect.y + calRect.h + 2, yMax: 96 - NOTE_SIZE.h });
+  }
+  // Above
+  if (calRect.y - NOTE_SIZE.h - 2 > 2) {
+    zones.push({ xMin: 4, xMax: 92 - NOTE_SIZE.w, yMin: 2, yMax: calRect.y - NOTE_SIZE.h - 2 });
+  }
+
+  // Fallback: anywhere on the wall
+  if (zones.length === 0) {
+    zones.push({ xMin: 2, xMax: 92 - NOTE_SIZE.w, yMin: 4, yMax: 92 - NOTE_SIZE.h });
+  }
+
+  const overlaps = (x: number, y: number) => {
+    for (const n of existingNotes) {
+      if (Math.abs(n.x - x) < NOTE_SIZE.w + 1 && Math.abs(n.y - y) < NOTE_SIZE.h + 1) return true;
+    }
+    // Also check calendar overlap
+    if (
+      x + NOTE_SIZE.w > calRect.x - 1 &&
+      x < calRect.x + calRect.w + 1 &&
+      y + NOTE_SIZE.h > calRect.y - 1 &&
+      y < calRect.y + calRect.h + 1
+    ) return true;
+    return false;
+  };
+
+  // Try to place in each zone, picking first non-overlapping spot
+  for (const zone of zones) {
+    const xRange = zone.xMax - zone.xMin;
+    const yRange = zone.yMax - zone.yMin;
+    if (xRange < 1 || yRange < 1) continue;
+
+    // Try a few candidates with organic spacing
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const x = zone.xMin + Math.random() * xRange;
+      const y = zone.yMin + Math.random() * yRange;
+      if (!overlaps(x, y)) return { x, y };
+    }
+  }
+
+  // Last resort: random position
+  return {
+    x: 2 + Math.random() * (90 - NOTE_SIZE.w),
+    y: 4 + Math.random() * (88 - NOTE_SIZE.h),
+  };
+}
 
 const flipVariants = {
   enter: (dir: number) => ({
@@ -96,15 +152,44 @@ const flipVariants = {
 export default function WallCalendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [direction, setDirection] = useState(0);
-  const [rangeStart, setRangeStart] = useState<Date | null>(null);
-  const [rangeEnd, setRangeEnd] = useState<Date | null>(null);
-  const [hoveredDate, setHoveredDate] = useState<Date | null>(null);
   const [notes, setNotes] = useState<NoteData[]>([]);
   const [isDark, setIsDark] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Calendar drag position (pixels from center)
+  const calX = useMotionValue(0);
+  const calY = useMotionValue(0);
+
+  // Track calendar position as % for note placement
+  const [calCenterPct, setCalCenterPct] = useState({ x: 50, y: 50 });
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);
   }, [isDark]);
+
+  // Update calendar center % on drag
+  const handleCalDrag = useCallback((_: any, info: PanInfo) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const cx = rect.width / 2 + calX.get();
+    const cy = rect.height / 2 + calY.get();
+    setCalCenterPct({
+      x: (cx / rect.width) * 100,
+      y: (cy / rect.height) * 100,
+    });
+  }, [calX, calY]);
+
+  const getCalRect = useCallback(() => {
+    // Calendar card approx dimensions in % of viewport
+    const w = 36; // ~520px / 1440 * 100
+    const h = 72; // ~580px / 800 * 100
+    return {
+      x: calCenterPct.x - w / 2,
+      y: calCenterPct.y - h / 2,
+      w,
+      h,
+    };
+  }, [calCenterPct]);
 
   const monthKey = format(currentMonth, "yyyy-MM");
 
@@ -113,41 +198,25 @@ export default function WallCalendar() {
     setCurrentMonth(dir === "next" ? addMonths(currentMonth, 1) : subMonths(currentMonth, 1));
   };
 
-  const handleDayClick = (day: Date) => {
+  const addStickyNote = useCallback((day: Date) => {
     if (!isSameMonth(day, currentMonth)) return;
-    if (!rangeStart || rangeEnd) {
-      setRangeStart(day);
-      setRangeEnd(null);
-    } else {
-      if (isBefore(day, rangeStart)) {
-        setRangeEnd(rangeStart);
-        setRangeStart(day);
-      } else {
-        setRangeEnd(day);
-      }
-    }
-  };
+    if (notes.length >= MAX_NOTES) return;
 
-  const addStickyNote = () => {
-    if (!rangeStart) return;
-    const existingCount = notes.length;
-    const posIdx = existingCount % NOTE_POSITIONS.length;
-    const pos = NOTE_POSITIONS[posIdx];
-    const colorIdx = existingCount % STICKY_COLOR_KEYS.length;
+    const calRect = getCalRect();
+    const existingPositions = notes.map((n) => n.position);
+    const position = findNotePosition(calRect, existingPositions);
+    const colorIdx = notes.length % STICKY_COLOR_KEYS.length;
 
     const newNote: NoteData = {
       id: `note-${Date.now()}`,
-      date: format(rangeStart, "yyyy-MM-dd"),
+      date: format(day, "yyyy-MM-dd"),
       text: "",
       color: STICKY_COLOR_KEYS[colorIdx],
-      position: {
-        x: pos.x + (Math.random() * 4 - 2),
-        y: pos.y + (Math.random() * 4 - 2),
-      },
-      rotation: Math.random() * 10 - 5,
+      position,
+      rotation: Math.random() * 8 - 4,
     };
     setNotes((prev) => [...prev, newNote]);
-  };
+  }, [currentMonth, notes, getCalRect]);
 
   const updateNote = (id: string, text: string) => {
     setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, text } : n)));
@@ -159,17 +228,29 @@ export default function WallCalendar() {
 
   const noteDates = useMemo(() => new Set(notes.map((n) => n.date)), [notes]);
 
-  const rangeLabel = useMemo(() => {
-    if (!rangeStart) return null;
-    if (rangeEnd) return `${format(rangeStart, "MMM d")} – ${format(rangeEnd, "MMM d")}`;
-    return format(rangeStart, "MMM d");
-  }, [rangeStart, rangeEnd]);
-
   const palettes = isDark ? DARK_PALETTES : LIGHT_PALETTES;
   const palette = palettes[currentMonth.getMonth()];
 
+  // Recalculate note positions when calendar moves significantly
+  useEffect(() => {
+    if (notes.length === 0) return;
+    const calRect = getCalRect();
+    const newPositions: { x: number; y: number }[] = [];
+
+    setNotes((prev) =>
+      prev.map((note) => {
+        const pos = findNotePosition(calRect, newPositions);
+        newPositions.push(pos);
+        return { ...note, position: pos };
+      })
+    );
+    // Only re-run when calendar center changes meaningfully
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [Math.round(calCenterPct.x / 8), Math.round(calCenterPct.y / 8)]);
+
   return (
     <motion.div
+      ref={containerRef}
       className="h-screen w-screen overflow-hidden relative flex items-center justify-center"
       animate={{
         background: `
@@ -195,7 +276,7 @@ export default function WallCalendar() {
         }}
       />
 
-      {/* Ambient light / lamp glow effect */}
+      {/* Ambient light / lamp glow */}
       <motion.div
         className="absolute inset-0 pointer-events-none"
         animate={{
@@ -236,58 +317,30 @@ export default function WallCalendar() {
       >
         <AnimatePresence mode="wait">
           {isDark ? (
-            <motion.div
-              key="sun"
-              initial={{ rotate: -90, opacity: 0, scale: 0.5 }}
-              animate={{ rotate: 0, opacity: 1, scale: 1 }}
-              exit={{ rotate: 90, opacity: 0, scale: 0.5 }}
-              transition={{ duration: 0.3 }}
-            >
+            <motion.div key="sun" initial={{ rotate: -90, opacity: 0, scale: 0.5 }} animate={{ rotate: 0, opacity: 1, scale: 1 }} exit={{ rotate: 90, opacity: 0, scale: 0.5 }} transition={{ duration: 0.3 }}>
               <Sun className="w-4.5 h-4.5" style={{ color: "hsl(35, 70%, 60%)" }} />
             </motion.div>
           ) : (
-            <motion.div
-              key="moon"
-              initial={{ rotate: 90, opacity: 0, scale: 0.5 }}
-              animate={{ rotate: 0, opacity: 1, scale: 1 }}
-              exit={{ rotate: -90, opacity: 0, scale: 0.5 }}
-              transition={{ duration: 0.3 }}
-            >
+            <motion.div key="moon" initial={{ rotate: 90, opacity: 0, scale: 0.5 }} animate={{ rotate: 0, opacity: 1, scale: 1 }} exit={{ rotate: -90, opacity: 0, scale: 0.5 }} transition={{ duration: 0.3 }}>
               <Moon className="w-4.5 h-4.5 text-muted-foreground" />
             </motion.div>
           )}
         </AnimatePresence>
       </motion.button>
 
-      {/* Shadow on the wall behind calendar */}
-      <div
-        className="absolute rounded-2xl"
-        style={{
-          width: "min(90vw, 520px)",
-          height: "min(82vh, 580px)",
-          background: isDark ? "hsla(0, 0%, 0%, 0.3)" : "hsla(0, 0%, 0%, 0.1)",
-          filter: isDark ? "blur(45px)" : "blur(35px)",
-          transform: "translate(5px, 12px)",
-        }}
-      />
-
-      {/* Pin */}
-      <motion.div
-        className="absolute z-40"
-        style={{ top: "calc(50% - min(41vh, 290px) - 10px)" }}
-        initial={{ y: -50, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
+      {/* Hint text */}
+      <motion.p
+        className="absolute bottom-4 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground/50 tracking-wider z-50 select-none"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.5 }}
       >
-        <div className="relative">
-          <div className="w-5 h-5 rounded-full bg-destructive shadow-lg shadow-destructive/40" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-destructive-foreground/50" />
-        </div>
-      </motion.div>
+        Double-click a date to add a note • Drag the calendar to reposition
+      </motion.p>
 
       {/* Sticky notes floating on the wall */}
       <AnimatePresence>
-        {notes.map((note) => (
+        {notes.map((note, i) => (
           <StickyNote
             key={note.id}
             id={note.id}
@@ -298,19 +351,47 @@ export default function WallCalendar() {
             onUpdate={updateNote}
             onRemove={removeNote}
             dateLabel={format(new Date(note.date + "T00:00:00"), "MMM d")}
+            delay={i * 0.06}
           />
         ))}
       </AnimatePresence>
 
-      {/* Calendar card */}
-      <div
-        className="relative z-10 flex flex-col"
+      {/* Draggable calendar card */}
+      <motion.div
+        className="relative z-10 flex flex-col cursor-grab active:cursor-grabbing"
         style={{
           width: "min(90vw, 520px)",
           height: "min(82vh, 580px)",
           perspective: "1200px",
+          x: calX,
+          y: calY,
         }}
+        drag
+        dragMomentum={false}
+        dragElastic={0.08}
+        dragConstraints={containerRef}
+        onDrag={handleCalDrag}
+        onDragEnd={handleCalDrag}
+        whileDrag={{ scale: 1.02 }}
       >
+        {/* Wall shadow behind calendar */}
+        <div
+          className="absolute inset-0 rounded-2xl -z-10"
+          style={{
+            background: isDark ? "hsla(0, 0%, 0%, 0.4)" : "hsla(0, 0%, 0%, 0.12)",
+            filter: isDark ? "blur(45px)" : "blur(35px)",
+            transform: "translate(5px, 12px)",
+          }}
+        />
+
+        {/* Pin */}
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-40">
+          <div className="relative">
+            <div className="w-5 h-5 rounded-full bg-destructive shadow-lg shadow-destructive/40" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-destructive-foreground/50" />
+          </div>
+        </div>
+
         {/* Spiral holes */}
         <div className="flex justify-center gap-8 sm:gap-12 relative z-20 mb-[-4px]">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -342,7 +423,7 @@ export default function WallCalendar() {
               `,
             }}
           >
-            {/* Month header with navigation */}
+            {/* Month header */}
             <div className="flex items-center justify-between px-4 sm:px-6 pt-4 pb-2">
               <button
                 onClick={() => navigateMonth("prev")}
@@ -399,60 +480,26 @@ export default function WallCalendar() {
             <div className="flex-1 px-3 sm:px-5 py-2 flex flex-col min-h-0">
               <CalendarGrid
                 currentMonth={currentMonth}
-                rangeStart={rangeStart}
-                rangeEnd={rangeEnd}
-                hoveredDate={hoveredDate}
                 noteDates={noteDates}
-                onDayClick={handleDayClick}
-                onDayHover={(d) => {
-                  if (!rangeEnd && rangeStart) setHoveredDate(d);
-                  else setHoveredDate(null);
-                }}
+                onDayDoubleClick={addStickyNote}
               />
             </div>
 
-            {/* Bottom action bar */}
-            <AnimatePresence>
-              {rangeStart && (
-                <motion.div
-                  className="px-4 sm:px-5 pb-3 pt-1"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                >
-                  <div className="flex items-center gap-2 bg-secondary/60 rounded-lg px-3 py-2">
-                    <span className="w-2.5 h-2.5 rounded-sm bg-primary shadow-sm" />
-                    <span className="text-[11px] font-medium text-muted-foreground flex-1">
-                      {rangeLabel}
-                      {!rangeEnd && " — click end date"}
-                    </span>
-                    <button
-                      onClick={addStickyNote}
-                      className="flex items-center gap-1 text-[10px] font-semibold bg-primary/10 text-primary hover:bg-primary/20 px-2.5 py-1 rounded-md transition-colors"
-                    >
-                      <Plus className="w-3 h-3" />
-                      Sticky Note
-                    </button>
-                    <button
-                      onClick={() => {
-                        setRangeStart(null);
-                        setRangeEnd(null);
-                      }}
-                      className="text-[10px] font-medium text-muted-foreground hover:text-destructive transition-colors ml-1"
-                    >
-                      Clear
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* Note count indicator */}
+            {notes.length > 0 && (
+              <div className="px-4 pb-2 flex items-center justify-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary/60" />
+                <span className="text-[10px] text-muted-foreground">
+                  {notes.length} note{notes.length !== 1 ? "s" : ""}{notes.length >= MAX_NOTES ? " (max)" : ""}
+                </span>
+              </div>
+            )}
 
             {/* Bottom accent bar */}
             <div className="h-1 bg-gradient-to-r from-primary/10 via-primary/40 to-primary/10 rounded-b-xl" />
           </motion.div>
         </AnimatePresence>
-      </div>
+      </motion.div>
     </motion.div>
   );
 }

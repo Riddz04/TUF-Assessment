@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useRef } from "react";
 import {
   format,
   startOfMonth,
@@ -8,8 +8,6 @@ import {
   addDays,
   isSameMonth,
   isSameDay,
-  isAfter,
-  isBefore,
   isWeekend,
 } from "date-fns";
 import { motion } from "framer-motion";
@@ -18,23 +16,17 @@ const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
 interface CalendarGridProps {
   currentMonth: Date;
-  rangeStart: Date | null;
-  rangeEnd: Date | null;
-  hoveredDate: Date | null;
   noteDates: Set<string>;
-  onDayClick: (day: Date) => void;
-  onDayHover: (day: Date | null) => void;
+  onDayDoubleClick: (day: Date) => void;
 }
 
 export default function CalendarGrid({
   currentMonth,
-  rangeStart,
-  rangeEnd,
-  hoveredDate,
   noteDates,
-  onDayClick,
-  onDayHover,
+  onDayDoubleClick,
 }: CalendarGridProps) {
+  const clickTimers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
+
   const calendarDays = useMemo(() => {
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
@@ -49,15 +41,23 @@ export default function CalendarGrid({
     return days;
   }, [currentMonth]);
 
-  const isInRange = useCallback(
-    (day: Date) => {
-      if (!rangeStart) return false;
-      const end = rangeEnd || hoveredDate;
-      if (!end) return false;
-      const [s, e] = isBefore(rangeStart, end) ? [rangeStart, end] : [end, rangeStart];
-      return (isAfter(day, s) || isSameDay(day, s)) && (isBefore(day, e) || isSameDay(day, e));
+  const handleClick = useCallback(
+    (day: Date, idx: number) => {
+      if (!isSameMonth(day, currentMonth)) return;
+
+      // Double-click detection
+      if (clickTimers.current.has(idx)) {
+        clearTimeout(clickTimers.current.get(idx)!);
+        clickTimers.current.delete(idx);
+        onDayDoubleClick(day);
+      } else {
+        const timer = setTimeout(() => {
+          clickTimers.current.delete(idx);
+        }, 300);
+        clickTimers.current.set(idx, timer);
+      }
     },
-    [rangeStart, rangeEnd, hoveredDate]
+    [currentMonth, onDayDoubleClick]
   );
 
   return (
@@ -82,9 +82,6 @@ export default function CalendarGrid({
       <div className="grid grid-cols-7 flex-1">
         {calendarDays.map((day, idx) => {
           const inMonth = isSameMonth(day, currentMonth);
-          const inRange = isInRange(day);
-          const isStart = rangeStart && isSameDay(day, rangeStart);
-          const isEnd = rangeEnd && isSameDay(day, rangeEnd);
           const weekend = isWeekend(day);
           const noted = noteDates.has(format(day, "yyyy-MM-dd"));
           const today = isSameDay(day, new Date());
@@ -94,29 +91,23 @@ export default function CalendarGrid({
               key={`${format(currentMonth, "yyyy-MM")}-${idx}`}
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: idx * 0.008, type: "spring", stiffness: 400, damping: 25 }}
-              onClick={() => inMonth && onDayClick(day)}
-              onMouseEnter={() => inMonth && onDayHover(day)}
-              onMouseLeave={() => onDayHover(null)}
+              transition={{ delay: idx * 0.006, type: "spring", stiffness: 400, damping: 25 }}
+              onClick={() => handleClick(day, idx)}
               disabled={!inMonth}
-              whileHover={inMonth ? { scale: 1.12, y: -1 } : {}}
+              whileHover={inMonth ? { scale: 1.15, y: -1 } : {}}
               whileTap={inMonth ? { scale: 0.92 } : {}}
               className={`
                 relative flex items-center justify-center
                 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200
                 ${!inMonth ? "text-muted-foreground/12 cursor-default" : "cursor-pointer hover:bg-accent/40"}
-                ${inMonth && !inRange && !isStart && !isEnd && weekend ? "text-calendar-weekend" : ""}
-                ${inMonth && !inRange && !isStart && !isEnd && !weekend ? "text-foreground/80" : ""}
-                ${inRange && !isStart && !isEnd ? "bg-calendar-range text-calendar-range-foreground rounded-none" : ""}
-                ${isStart ? "bg-primary text-primary-foreground font-semibold shadow-sm shadow-primary/20 z-10 rounded-l-lg rounded-r-none" : ""}
-                ${isEnd ? "bg-primary text-primary-foreground font-semibold shadow-sm shadow-primary/20 z-10 rounded-r-lg rounded-l-none" : ""}
-                ${isStart && !isEnd && !rangeEnd ? "rounded-lg" : ""}
-                ${today && !isStart && !isEnd ? "ring-1 ring-primary/30 ring-offset-1 ring-offset-card font-medium" : ""}
+                ${inMonth && weekend ? "text-calendar-weekend" : ""}
+                ${inMonth && !weekend ? "text-foreground/80" : ""}
+                ${today ? "ring-1 ring-primary/30 ring-offset-1 ring-offset-card font-semibold" : ""}
               `}
             >
               {format(day, "d")}
               {noted && inMonth && (
-                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />
+                <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />
               )}
             </motion.button>
           );

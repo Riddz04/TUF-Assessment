@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useRef } from "react";
 import { motion } from "framer-motion";
 import { X } from "lucide-react";
 
@@ -11,6 +11,7 @@ interface StickyNoteProps {
   onUpdate: (id: string, text: string) => void;
   onRemove: (id: string) => void;
   dateLabel: string;
+  delay?: number;
 }
 
 const STICKY_COLORS: Record<string, { bg: string; shadow: string; tape: string }> = {
@@ -50,6 +51,7 @@ export default function StickyNote({
   onUpdate,
   onRemove,
   dateLabel,
+  delay = 0,
 }: StickyNoteProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const colors = STICKY_COLORS[color] || STICKY_COLORS.yellow;
@@ -62,13 +64,17 @@ export default function StickyNote({
         top: `${position.y}%`,
         width: "clamp(120px, 12vw, 160px)",
       }}
-      initial={{ scale: 0, rotate: rotation - 15, opacity: 0, y: -40 }}
+      initial={{ scale: 0, rotate: rotation - 10, opacity: 0, y: -20 }}
       animate={{ scale: 1, rotate: rotation, opacity: 1, y: 0 }}
-      exit={{ scale: 0, rotate: rotation + 20, opacity: 0, y: 30 }}
-      transition={{ type: "spring", stiffness: 260, damping: 18 }}
-      whileHover={{ scale: 1.08, rotate: 0, zIndex: 50 }}
-      drag
-      dragMomentum={false}
+      exit={{ scale: 0, rotate: rotation + 15, opacity: 0, y: 20 }}
+      transition={{
+        type: "spring",
+        stiffness: 300,
+        damping: 20,
+        delay,
+      }}
+      layout
+      whileHover={{ scale: 1.06, rotate: 0, zIndex: 50 }}
     >
       {/* Tape strip */}
       <div
@@ -80,7 +86,7 @@ export default function StickyNote({
       />
       {/* Note body */}
       <div
-        className="relative rounded-sm pt-4 pb-2 px-3 cursor-grab active:cursor-grabbing"
+        className="relative rounded-sm pt-4 pb-2 px-3"
         style={{
           background: colors.bg,
           boxShadow: `2px 4px 12px ${colors.shadow}, 0 1px 3px hsla(0,0%,0%,0.08)`,
