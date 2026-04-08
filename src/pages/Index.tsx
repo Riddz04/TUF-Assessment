@@ -1,4 +1,4 @@
-import WallCalendar from "@/components/WallCalendar";
+import WallCalendar from "@/components/wall-calendar/WallCalendar";
 
 const Index = () => <WallCalendar />;
 
