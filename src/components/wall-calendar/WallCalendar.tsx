@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import {
   format,
   addMonths,
@@ -8,25 +8,41 @@ import {
   isSameMonth,
   eachDayOfInterval,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Sun, Moon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import CalendarGrid from "./CalendarGrid";
 import StickyNote, { STICKY_COLOR_KEYS } from "./StickyNote";
 
-// Seasonal wall palettes: [wallGradientStart, wallGradientEnd, accentGlow, warmth]
-const MONTH_PALETTES: Record<number, { wall: [string, string]; glow: string; accent: string }> = {
-  0:  { wall: ["hsl(210, 18%, 88%)", "hsl(215, 15%, 82%)"], glow: "hsl(210, 30%, 85%)", accent: "hsl(210, 40%, 70%)" },  // Jan - cool blue-grey
-  1:  { wall: ["hsl(215, 16%, 87%)", "hsl(220, 14%, 81%)"], glow: "hsl(215, 28%, 84%)", accent: "hsl(220, 35%, 72%)" },  // Feb - steel blue
-  2:  { wall: ["hsl(140, 14%, 88%)", "hsl(150, 12%, 83%)"], glow: "hsl(140, 25%, 85%)", accent: "hsl(150, 30%, 70%)" },  // Mar - soft sage
-  3:  { wall: ["hsl(120, 12%, 89%)", "hsl(130, 10%, 84%)"], glow: "hsl(120, 20%, 86%)", accent: "hsl(130, 28%, 72%)" },  // Apr - spring green
-  4:  { wall: ["hsl(80, 14%, 89%)", "hsl(90, 12%, 84%)"],   glow: "hsl(80, 22%, 86%)",  accent: "hsl(90, 30%, 70%)" },   // May - lime
-  5:  { wall: ["hsl(45, 18%, 89%)", "hsl(40, 16%, 83%)"],   glow: "hsl(45, 28%, 86%)",  accent: "hsl(40, 35%, 72%)" },   // Jun - warm gold
-  6:  { wall: ["hsl(35, 22%, 89%)", "hsl(30, 20%, 82%)"],   glow: "hsl(35, 32%, 85%)",  accent: "hsl(30, 40%, 70%)" },   // Jul - sunlit amber
-  7:  { wall: ["hsl(30, 24%, 88%)", "hsl(25, 22%, 81%)"],   glow: "hsl(30, 35%, 84%)",  accent: "hsl(25, 42%, 68%)" },   // Aug - warm peach
-  8:  { wall: ["hsl(25, 18%, 88%)", "hsl(20, 16%, 83%)"],   glow: "hsl(25, 28%, 85%)",  accent: "hsl(20, 35%, 70%)" },   // Sep - harvest
-  9:  { wall: ["hsl(18, 16%, 87%)", "hsl(15, 14%, 82%)"],   glow: "hsl(18, 25%, 84%)",  accent: "hsl(15, 32%, 68%)" },   // Oct - autumn rust
-  10: { wall: ["hsl(220, 14%, 87%)", "hsl(225, 12%, 82%)"], glow: "hsl(220, 22%, 84%)", accent: "hsl(225, 28%, 70%)" },  // Nov - cool slate
-  11: { wall: ["hsl(210, 20%, 90%)", "hsl(215, 18%, 84%)"], glow: "hsl(210, 30%, 87%)", accent: "hsl(215, 35%, 74%)" },  // Dec - icy blue
+// Light mode seasonal palettes
+const LIGHT_PALETTES: Record<number, { wall: [string, string]; glow: string; accent: string }> = {
+  0:  { wall: ["hsl(210, 18%, 88%)", "hsl(215, 15%, 82%)"], glow: "hsl(210, 30%, 85%)", accent: "hsl(210, 40%, 70%)" },
+  1:  { wall: ["hsl(215, 16%, 87%)", "hsl(220, 14%, 81%)"], glow: "hsl(215, 28%, 84%)", accent: "hsl(220, 35%, 72%)" },
+  2:  { wall: ["hsl(140, 14%, 88%)", "hsl(150, 12%, 83%)"], glow: "hsl(140, 25%, 85%)", accent: "hsl(150, 30%, 70%)" },
+  3:  { wall: ["hsl(120, 12%, 89%)", "hsl(130, 10%, 84%)"], glow: "hsl(120, 20%, 86%)", accent: "hsl(130, 28%, 72%)" },
+  4:  { wall: ["hsl(80, 14%, 89%)", "hsl(90, 12%, 84%)"],   glow: "hsl(80, 22%, 86%)",  accent: "hsl(90, 30%, 70%)" },
+  5:  { wall: ["hsl(45, 18%, 89%)", "hsl(40, 16%, 83%)"],   glow: "hsl(45, 28%, 86%)",  accent: "hsl(40, 35%, 72%)" },
+  6:  { wall: ["hsl(35, 22%, 89%)", "hsl(30, 20%, 82%)"],   glow: "hsl(35, 32%, 85%)",  accent: "hsl(30, 40%, 70%)" },
+  7:  { wall: ["hsl(30, 24%, 88%)", "hsl(25, 22%, 81%)"],   glow: "hsl(30, 35%, 84%)",  accent: "hsl(25, 42%, 68%)" },
+  8:  { wall: ["hsl(25, 18%, 88%)", "hsl(20, 16%, 83%)"],   glow: "hsl(25, 28%, 85%)",  accent: "hsl(20, 35%, 70%)" },
+  9:  { wall: ["hsl(18, 16%, 87%)", "hsl(15, 14%, 82%)"],   glow: "hsl(18, 25%, 84%)",  accent: "hsl(15, 32%, 68%)" },
+  10: { wall: ["hsl(220, 14%, 87%)", "hsl(225, 12%, 82%)"], glow: "hsl(220, 22%, 84%)", accent: "hsl(225, 28%, 70%)" },
+  11: { wall: ["hsl(210, 20%, 90%)", "hsl(215, 18%, 84%)"], glow: "hsl(210, 30%, 87%)", accent: "hsl(215, 35%, 74%)" },
+};
+
+// Dark mode: cozy warm lamp-lit wall
+const DARK_PALETTES: Record<number, { wall: [string, string]; glow: string; accent: string }> = {
+  0:  { wall: ["hsl(220, 15%, 12%)", "hsl(225, 12%, 8%)"],  glow: "hsl(35, 50%, 25%)",  accent: "hsl(35, 60%, 35%)" },
+  1:  { wall: ["hsl(225, 14%, 11%)", "hsl(230, 12%, 7%)"],  glow: "hsl(30, 45%, 24%)",  accent: "hsl(30, 55%, 33%)" },
+  2:  { wall: ["hsl(160, 10%, 12%)", "hsl(170, 8%, 8%)"],   glow: "hsl(38, 48%, 26%)",  accent: "hsl(40, 50%, 34%)" },
+  3:  { wall: ["hsl(140, 8%, 12%)", "hsl(150, 6%, 8%)"],    glow: "hsl(35, 50%, 27%)",  accent: "hsl(38, 55%, 35%)" },
+  4:  { wall: ["hsl(100, 8%, 12%)", "hsl(110, 6%, 8%)"],    glow: "hsl(40, 52%, 28%)",  accent: "hsl(42, 55%, 36%)" },
+  5:  { wall: ["hsl(40, 12%, 13%)", "hsl(35, 10%, 8%)"],    glow: "hsl(35, 55%, 30%)",  accent: "hsl(30, 60%, 38%)" },
+  6:  { wall: ["hsl(30, 14%, 13%)", "hsl(25, 12%, 8%)"],    glow: "hsl(30, 58%, 32%)",  accent: "hsl(25, 62%, 40%)" },
+  7:  { wall: ["hsl(25, 16%, 13%)", "hsl(20, 14%, 8%)"],    glow: "hsl(28, 60%, 33%)",  accent: "hsl(22, 65%, 40%)" },
+  8:  { wall: ["hsl(22, 14%, 12%)", "hsl(18, 12%, 8%)"],    glow: "hsl(32, 55%, 30%)",  accent: "hsl(28, 58%, 38%)" },
+  9:  { wall: ["hsl(18, 12%, 12%)", "hsl(14, 10%, 8%)"],    glow: "hsl(30, 50%, 28%)",  accent: "hsl(25, 55%, 36%)" },
+  10: { wall: ["hsl(230, 12%, 11%)", "hsl(235, 10%, 7%)"],  glow: "hsl(33, 48%, 25%)",  accent: "hsl(30, 52%, 33%)" },
+  11: { wall: ["hsl(220, 16%, 12%)", "hsl(225, 14%, 8%)"],  glow: "hsl(35, 52%, 27%)",  accent: "hsl(32, 58%, 35%)" },
 };
 
 interface NoteData {
@@ -88,6 +104,11 @@ export default function WallCalendar() {
   const [rangeEnd, setRangeEnd] = useState<Date | null>(null);
   const [hoveredDate, setHoveredDate] = useState<Date | null>(null);
   const [notes, setNotes] = useState<NoteData[]>([]);
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDark);
+  }, [isDark]);
 
   const monthKey = format(currentMonth, "yyyy-MM");
 
@@ -148,7 +169,8 @@ export default function WallCalendar() {
     return format(rangeStart, "MMM d");
   }, [rangeStart, rangeEnd]);
 
-  const palette = MONTH_PALETTES[currentMonth.getMonth()];
+  const palettes = isDark ? DARK_PALETTES : LIGHT_PALETTES;
+  const palette = palettes[currentMonth.getMonth()];
 
   return (
     <motion.div
@@ -177,14 +199,69 @@ export default function WallCalendar() {
         }}
       />
 
-      {/* Ambient light effect */}
+      {/* Ambient light / lamp glow effect */}
       <motion.div
         className="absolute inset-0 pointer-events-none"
         animate={{
-          background: `radial-gradient(ellipse at 50% 30%, ${palette.accent}15 0%, transparent 70%)`,
+          background: isDark
+            ? `radial-gradient(ellipse at 50% 0%, ${palette.glow}90 0%, ${palette.glow}30 25%, transparent 60%)`
+            : `radial-gradient(ellipse at 50% 30%, ${palette.accent}15 0%, transparent 70%)`,
         }}
         transition={{ duration: 1.2 }}
       />
+
+      {/* Dark mode warm vignette */}
+      <AnimatePresence>
+        {isDark && (
+          <motion.div
+            className="absolute inset-0 pointer-events-none"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.8 }}
+            style={{
+              background: "radial-gradient(ellipse at 50% 40%, transparent 30%, hsla(20, 30%, 5%, 0.5) 100%)",
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Dark mode toggle */}
+      <motion.button
+        className="absolute top-4 right-4 z-50 w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-sm border transition-colors"
+        style={{
+          background: isDark ? "hsla(35, 40%, 20%, 0.7)" : "hsla(0, 0%, 100%, 0.6)",
+          borderColor: isDark ? "hsla(35, 30%, 30%, 0.5)" : "hsla(0, 0%, 0%, 0.08)",
+        }}
+        onClick={() => setIsDark(!isDark)}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        title={isDark ? "Switch to day mode" : "Switch to night mode"}
+      >
+        <AnimatePresence mode="wait">
+          {isDark ? (
+            <motion.div
+              key="sun"
+              initial={{ rotate: -90, opacity: 0, scale: 0.5 }}
+              animate={{ rotate: 0, opacity: 1, scale: 1 }}
+              exit={{ rotate: 90, opacity: 0, scale: 0.5 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Sun className="w-4.5 h-4.5" style={{ color: "hsl(35, 70%, 60%)" }} />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="moon"
+              initial={{ rotate: 90, opacity: 0, scale: 0.5 }}
+              animate={{ rotate: 0, opacity: 1, scale: 1 }}
+              exit={{ rotate: -90, opacity: 0, scale: 0.5 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Moon className="w-4.5 h-4.5 text-muted-foreground" />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.button>
 
       {/* Shadow on the wall behind calendar */}
       <div
@@ -192,8 +269,8 @@ export default function WallCalendar() {
         style={{
           width: "min(90vw, 520px)",
           height: "min(82vh, 580px)",
-          background: "hsla(0, 0%, 0%, 0.1)",
-          filter: "blur(35px)",
+          background: isDark ? "hsla(0, 0%, 0%, 0.3)" : "hsla(0, 0%, 0%, 0.1)",
+          filter: isDark ? "blur(45px)" : "blur(35px)",
           transform: "translate(5px, 12px)",
         }}
       />
